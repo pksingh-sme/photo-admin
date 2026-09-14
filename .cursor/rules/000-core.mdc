@@ -1,0 +1,34 @@
+---
+description: Core architectural constraints for the PhotoPrint Admin & API platform. Always in force.
+alwaysApply: true
+---
+
+# Non-negotiable constraints
+
+Violating any of these produces code that is wrong even when it passes tests.
+
+1. **Tenant from credentials only.** The OEM is derived from the authenticated session or API credential. Never accept an OEM/tenant identifier from a header, query param, path segment or request body. If you need a tenant in a test, authenticate as a principal that has it.
+
+2. **No database access outside `src/data/`.** Nothing else imports the Drizzle client or opens a connection. Feature code calls repositories.
+
+3. **Every tenant-owned query is scope-filtered.** MySQL has no row-level security — nothing will catch this for you. Out-of-scope reads return **not found**, never forbidden.
+
+4. **Money is never a `number`.** Use the `Money` type from `src/money/`. Never `+`, `-`, `*`, `/`, `toFixed`, `parseFloat` or `Number()` on a monetary value.
+
+5. **No business rule enforced only in a client.** The server decides. The admin UI has no privileged path — it calls the same API as any other client.
+
+6. **Every mutation is audited** with actor, OEM, resource, action, before and after.
+
+7. **Storefront-facing API changes are additive only.** Never remove or repurpose a field, never tighten validation, never change an enum's meaning. A shipped mobile app cannot be force-updated.
+
+# House style
+
+- TypeScript `strict`. No `any`. No non-null assertion (`!`) to silence the compiler — narrow the type instead.
+- Validate every external input with Zod at the boundary. Parse, don't cast.
+- Errors carry a machine-readable code, a human-readable message and a request id.
+- Async work that can be slow or fail goes through a job, with status, retry and dead-lettering — never a fire-and-forget promise.
+- Reference BRD requirement IDs (`FR-XXX-000`) in comments where a rule is non-obvious.
+
+# When unsure
+
+If a requirement seems ambiguous, say so and ask rather than inventing a business rule. The BRD distinguishes CONFIRMED, ASSUMPTION, RECOMMENDATION, OPEN DECISION and GAP — inventing a rule to fill a gap is how a specification silently drifts.

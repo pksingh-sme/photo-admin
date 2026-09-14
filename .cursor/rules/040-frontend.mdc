@@ -1,0 +1,49 @@
+---
+description: React admin UI conventions, including the accessibility obligation and the no-privileged-path rule.
+globs: ["apps/admin-ui/**"]
+---
+
+# Admin UI
+
+React 19 + Vite + TanStack Router + TanStack Query + shadcn/ui on Radix + Tailwind. Built as a **static bundle** served from S3/CloudFront — there is no server-side runtime in this app.
+
+## The rule that shapes everything
+
+**The admin UI is just another API client.** It has no privileged path, no direct database access, no server actions, no backend-for-frontend of its own. Everything it does, it does through the same API a third-party client would use. (`FR-ARCH-002`)
+
+If something the UI needs is not in the API, **add it to the API** — do not work around it in the client.
+
+## State
+
+- Server state: TanStack Query. Never duplicate server state into a store.
+- Client state: local component state, or a small store for genuinely global UI concerns.
+- The API client is **generated from the OpenAPI spec**. Do not hand-write fetch calls.
+
+## Rules the UI may display but never enforce
+
+Validation, pricing, availability, permissions and quality assessment are all server-authoritative. The UI may mirror a rule for responsiveness — and must still submit and let the server decide. A client-side check is a convenience, never a gate. (`FR-ARCH-003`)
+
+## OEM context
+
+- The OEM context is established before any scoped action and **visible persistently** in the chrome. (`FR-IAM-005`)
+- Switching context re-resolves permissions and re-renders available modules and actions — it is not a filter applied to a cached menu. (`FR-IAM-006`)
+- The context selector lists only OEMs the user is authorized for. It never reveals that others exist. (`FR-IAM-008`)
+- Single-OEM users get context automatically and see no switcher.
+
+## Accessibility — this is a legal obligation, not a nice-to-have
+
+The European Accessibility Act applies to the Admin section, not only to customer-facing surfaces. (`FR-SCP-007`, `FR-UIA-*`)
+
+- Every control has an accessible name and role. Decorative elements are hidden from assistive technology.
+- Full keyboard operation. Logical focus order. Modals trap and restore focus.
+- Colour is never the sole carrier of meaning — status and quality bands carry text or shape too.
+- Contrast ratios met in light and dark.
+- Errors are announced, associated with their control, and describe the remedy.
+- Respect reduced-motion preferences.
+
+**shadcn/ui copies components into this repository.** Radix gets the hard parts right; once copied, correctness is ours to keep. Every modification to a copied component is a chance to break focus management or ARIA — re-verify after changing one.
+
+## Money and dates
+
+- Money arrives as `{ amount: string, currency }`. Format for display; never parse into a `number`.
+- Dates are ISO 8601 with timezone. Display in the user's locale; never assume the server's.

@@ -1,0 +1,47 @@
+---
+description: Testing standards — what must be tested, with what, and which suites can never be skipped.
+globs: ["**/*.test.ts", "**/*.spec.ts", "test/**", "e2e/**"]
+---
+
+# Testing
+
+Vitest for unit and integration. Testcontainers with **real MySQL** for anything touching the database. Playwright for end-to-end and accessibility.
+
+## Never test the database against a substitute
+
+The tenancy guard is the thing most worth testing and the thing an in-memory or SQLite substitute will not exercise faithfully. Integration tests run against real MySQL via Testcontainers.
+
+## Suites that block the build
+
+| Suite | What it proves |
+|---|---|
+| `test/tenancy/` | No cross-tenant read, write, update, delete or list leak (`FR-TEN-010`) |
+| `test/money/` | Exact decimal arithmetic, rounding at the specified points, FX applied once, voucher allocation reconciles |
+| `test/contract/` | Responses conform to the published OpenAPI spec |
+| `test/authz/` | Default deny; explicit deny beats grant; permissions in one OEM never affect another |
+
+None of these are skipped, quarantined, or marked flaky-tolerant. If one is failing, it is telling the truth.
+
+## Writing tests
+
+- Tests describe behaviour, not implementation. Renaming a private method must not break a test.
+- One assertion subject per test. A test that asserts five unrelated things reports one failure for five problems.
+- Use the BRD's acceptance criteria as test names where they exist — `AC-ORD-001-01` is a test name.
+- Fixtures create **two tenants by default**, so a cross-tenant mistake fails immediately rather than in a dedicated suite six months later.
+- No `.only` on a committed test. The linter should reject it.
+
+## Money tests
+
+Transcribe the worked examples from BRD Parts 5 and 6 before implementing the pricing engine. Include:
+
+- A voucher allocated across lines with different VAT rates, where the allocation has a rounding remainder
+- A price authored in EUR, displayed in GBP, with conversion applied once
+- A page-priced product at minimum, at an increment boundary, and above maximum
+
+## Accessibility tests
+
+Playwright + axe on every admin screen, in the pipeline, not only before release. An accessibility regression is a build failure. (`FR-SCP-007`)
+
+## What not to test
+
+Do not test framework behaviour, generated code, or the ORM. Test your rules.

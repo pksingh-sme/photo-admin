@@ -1,0 +1,44 @@
+---
+description: API design, versioning, auth, errors and audit conventions. Apply when writing controllers, DTOs, guards or anything on the request path.
+globs: ["src/modules/**/*.controller.ts", "src/modules/**/*.dto.ts", "src/platform/auth/**", "src/platform/audit/**", "src/contracts/**"]
+---
+
+# API conventions
+
+## Two endpoint families, one API
+
+| Family | Consumers | Evolution |
+|---|---|---|
+| **Admin** (`/v1/admin/...`) | The Admin UI | Coordinated release — the only consumer ships with the API |
+| **Storefront** (`/v1/...`) | Angular storefront, hybrid mobile app | **Strictly additive only** |
+
+The storefront family is consumed by a shipped mobile app that **cannot be force-updated**. Never remove a field, never repurpose one, never tighten validation, never add a required request field, never change an enum value's meaning. Add new optional fields and new endpoints. (`FR-SAC-002`, `FR-SAC-003`)
+
+## Authentication and scope
+
+- The OEM comes from the credential. Never from the request. (`FR-API-003`)
+- Every protected endpoint enforces authorization **server-side, on every request** — never inferred from the fact that the UI hid a button. (`FR-API-002`)
+- Authorization is subject + action + resource + OEM scope. Default deny; an explicit deny beats any grant in the same OEM. (`FR-IAM-001`, `FR-IAM-007`)
+- API credentials are bound to exactly one OEM and individually revocable. (`FR-API-009`)
+
+## Request handling
+
+- Validate every input with Zod at the boundary. Parse into a typed value; never cast.
+- State-changing endpoints accept an **idempotency key** and guarantee at-most-once effect per key. (`FR-API-004`)
+- Collection endpoints support consistent pagination, filtering and sorting. Cursor pagination for anything that can grow unbounded. (`FR-API-006`)
+- Rate limit per client, per tenant, per endpoint. (`FR-API-007`)
+
+## Responses
+
+- One error model everywhere: machine-readable `code`, human-readable `message`, `requestId`. (`FR-API-005`)
+- Every machine-readable reason code has a corresponding translation key so the message is localisable. (`FR-CNT-019`)
+- Never leak the existence of another tenant's data — out-of-scope is 404. (`FR-TEN-003`)
+- Never return a raw database error, stack trace or SQL fragment.
+
+## Audit
+
+Every mutating call is attributable to a user or API client and recorded with OEM, resource, action, before and after. Append-only. (`FR-API-010`)
+
+## Contract
+
+The OpenAPI specification is generated from the code and is **the authoritative contract** (`FR-API-008`). It is published per phase for the frontend project. Never hand-edit the generated spec; change the code.

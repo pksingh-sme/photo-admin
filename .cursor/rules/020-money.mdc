@@ -1,0 +1,49 @@
+---
+description: Monetary arithmetic, currency, FX and VAT rules. Apply when writing pricing, cart, checkout, tax, voucher or invoice code.
+globs: ["src/money/**", "src/modules/pricing/**", "src/modules/cart/**", "src/modules/checkout/**", "src/modules/tax/**", "src/modules/vouchers/**", "src/modules/orders/**"]
+---
+
+# Money
+
+JavaScript's `number` is binary floating point and cannot represent decimal money exactly. `0.1 + 0.2 !== 0.3`. On an invoice this becomes a tax discrepancy, not a display bug.
+
+## Absolute rules
+
+- Monetary values are the `Money` type (`src/money/`). Never `number`.
+- `Money` carries an **amount and a currency**. An amount without a currency is not money.
+- Arithmetic goes through `Money` methods, backed by decimal.js. Never native operators.
+- Never `parseFloat`, `Number()`, `toFixed`, or `JSON.parse` into a numeric money field.
+- The MySQL driver returns `DECIMAL` as **string**. Do not "helpfully" convert it.
+- Money crosses the API as `{ "amount": "12.34", "currency": "EUR" }` — a string amount, never a JSON number.
+- Two `Money` values in different currencies cannot be added. The type prevents it; do not work around it.
+
+## Rounding
+
+- Every rounding point is explicit, named, and matches the BRD rule for that step.
+- Rounding happens where the specification says it happens — not wherever it is convenient.
+- Never round intermediate values "to keep things tidy".
+
+## FX
+
+- Prices are authored in the OEM's base currency.
+- **Conversion is applied once, at the end** of the calculation — never per line, never twice. (Part 5)
+- The rate used is snapshotted onto the order. A later rate change never alters an existing order. (`FR-ORD-011`)
+
+## VAT
+
+- Destination principle: the rate is determined by the delivery country and the product's tax category.
+- Rates are data, per country per category — never hardcoded, never inferred.
+- VAT is computed per line, because lines can carry different rates.
+
+## Vouchers
+
+- A basket-level discount is allocated **proportionally across lines** before VAT, because lines carry different rates. Allocating after VAT, or to a single line, produces a wrong tax figure.
+- The allocation must total exactly the discount — reconcile the rounding remainder deterministically, on a documented line.
+
+## Snapshots
+
+Price, rate, product configuration and tax treatment are **snapshotted onto the order at placement**. Reading current values when displaying a historical order is a defect. (`FR-ORD-011`)
+
+## Tests first
+
+The BRD's worked examples in Parts 5 and 6 are the test suite. Transcribe them before implementing the engine.

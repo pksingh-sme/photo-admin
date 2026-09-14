@@ -1,0 +1,42 @@
+---
+description: Multi-tenant data access rules. Apply when writing repositories, schema, queries or anything touching tenant-owned data.
+globs: ["src/data/**", "src/modules/**/*.repository.ts", "src/modules/**/*.service.ts", "test/tenancy/**"]
+---
+
+# Tenancy
+
+The OEM is the tenant. Every OEM is one brand and one website. A cross-tenant leak is the most serious defect this platform can produce, and **MySQL has no row-level security**, so there is no database backstop. The application is the only line of defence.
+
+## Schema rules
+
+- Every tenant-owned table carries a non-nullable `oem_id`. (`FR-TEN-001`)
+- `oem_id` is **immutable** — no code path reassigns a record to a different OEM. (`FR-TEN-004`)
+- `oem_id` is the leading column of the primary access index on every tenant-owned table.
+- Platform master data is a separate concern: OEM-scoped users read it, never write it. (`FR-TEN-007`)
+
+## Access rules
+
+- A repository method that touches a tenant-owned table takes a `TenantContext` as its **first parameter**. It is not ambient, not from a global, not from async-local storage reached implicitly. If you have no context, you cannot query.
+- Use the scoped builder from `src/data/scoped.ts`. It applies the `oem_id` predicate. Do not construct a raw query against a tenant-owned table.
+- Never `db.select()` directly in feature code. Never import the Drizzle client outside `src/data/`.
+
+## Response rules
+
+- A record outside the caller's scope is reported as **not found** (404), never forbidden (403). Returning 403 confirms the record exists in another tenant. (`FR-TEN-003`)
+- List endpoints return the caller's scope only. There is no "all tenants" mode, including for platform administrators, without an explicit and audited platform-scope grant.
+
+## Observability
+
+- Logs, metrics, traces and audit records carry OEM context. (`FR-TEN-009`)
+
+## Tests
+
+Every new tenant-owned entity gets a case in `test/tenancy/`:
+
+1. Tenant A creates a record
+2. Tenant B reads it by id → **404**
+3. Tenant B updates it → **404**
+4. Tenant B deletes it → **404**
+5. Tenant B lists → the record is absent
+
+These tests are never skipped, never marked `.only`-adjacent, and a failure blocks the build. (`FR-TEN-010`)
