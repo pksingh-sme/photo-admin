@@ -24,9 +24,26 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
+          paths: [
+            {
+              name: 'drizzle-orm',
+              message:
+                'Database access is only permitted inside src/data/. Use a repository.',
+            },
+            {
+              name: 'mysql2',
+              message:
+                'Database access is only permitted inside src/data/. Use a repository.',
+            },
+          ],
           patterns: [
             {
-              group: ['**/data/client', 'drizzle-orm/mysql2', 'mysql2'],
+              group: [
+                'drizzle-orm/*',
+                'mysql2/*',
+                '**/data/client',
+                '**/data/client.*',
+              ],
               message:
                 'Database access is only permitted inside src/data/. Use a repository.',
             },
@@ -36,7 +53,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/data/**/*.ts'],
+    files: ['src/data/**'],
     rules: {
       'no-restricted-imports': 'off',
     },
