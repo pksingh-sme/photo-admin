@@ -1,6 +1,11 @@
 import swc from 'unplugin-swc';
 import { defineConfig } from 'vitest/config';
 
+const testBase = {
+  environment: 'node' as const,
+  setupFiles: ['./vitest.setup.ts'],
+};
+
 export default defineConfig({
   plugins: [
     swc.vite({
@@ -18,8 +23,31 @@ export default defineConfig({
     }),
   ],
   test: {
-    environment: 'node',
-    include: ['src/**/*.spec.ts', 'test/**/*.spec.ts', 'test/**/*.test.ts'],
-    setupFiles: ['./vitest.setup.ts'],
+    ...testBase,
+    projects: [
+      {
+        test: {
+          ...testBase,
+          name: 'unit',
+          include: [
+            'src/**/*.spec.ts',
+            'src/**/*.test.ts',
+            'test/money/**/*.spec.ts',
+            'test/money/**/*.test.ts',
+            'test/authz/**/*.spec.ts',
+            'test/authz/**/*.test.ts',
+            'test/contract/**/*.spec.ts',
+            'test/contract/**/*.test.ts',
+          ],
+        },
+      },
+      {
+        test: {
+          ...testBase,
+          name: 'tenancy',
+          include: ['test/tenancy/**/*.spec.ts', 'test/tenancy/**/*.test.ts'],
+        },
+      },
+    ],
   },
 });

@@ -13,7 +13,9 @@
     "start:prod": "node dist/main.js",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "vitest run"
+    "check:tenant-request": "node --experimental-transform-types --no-warnings=ExperimentalWarning scripts/check-no-tenant-in-request.ts",
+    "test": "vitest run --project unit",
+    "test:tenancy": "vitest run --project tenancy"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.2",

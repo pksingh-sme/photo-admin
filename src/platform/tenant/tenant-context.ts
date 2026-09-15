@@ -10,13 +10,13 @@
 declare const oemIdBrand: unique symbol;
 export type OemId = string & { readonly [oemIdBrand]: 'OemId' };
 
-declare const principalBrand: unique symbol;
+const principalBrand: unique symbol = Symbol('AuthenticatedPrincipal');
 export type AuthenticatedPrincipal = {
   readonly [principalBrand]: 'AuthenticatedPrincipal';
   readonly oemId: OemId;
 };
 
-declare const tenantContextBrand: unique symbol;
+const tenantContextBrand: unique symbol = Symbol('TenantContext');
 export type TenantContext = {
   readonly [tenantContextBrand]: 'TenantContext';
   readonly oemId: OemId;

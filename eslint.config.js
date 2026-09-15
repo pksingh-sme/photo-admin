@@ -59,7 +59,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.spec.ts', '**/*.test.ts'],
+    files: ['**/*.spec.ts', '**/*.test.ts', 'test/tenancy/**/*.ts'],
     plugins: {
       vitest,
     },
