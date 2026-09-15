@@ -5,6 +5,7 @@ A single repository containing the API, the admin UI and the infrastructure. One
 ```
 photoprint-platform/
 ├── AGENTS.md                      Baseline instructions for AI assistants
+├── Dockerfile                     linux/arm64 Graviton, digest-pinned, non-root
 ├── .cursor/rules/                 Conditional rules, activated by file globs
 │   ├── 000-core.mdc               always applied
 │   ├── 010-tenancy.mdc
@@ -16,7 +17,8 @@ photoprint-platform/
 │   ├── ENGINEERING-STANDARDS.md
 │   ├── REPOSITORY-STRUCTURE.md
 │   ├── PHASE-1-BACKLOG.md
-│   └── DEFINITION-OF-DONE.md
+│   ├── DEFINITION-OF-DONE.md
+│   └── SECURITY-STANDARD.md      OWASP ASVS Level 2 (`FR-SEC-004`)
 │
 ├── src/                           API service
 │   ├── main.ts

@@ -24,6 +24,17 @@ export function getRequestId(): string | undefined {
   return requestIdStorage.getStore();
 }
 
+export function readRequestId(request: unknown): string | undefined {
+  if (typeof request !== 'object' || request === null) {
+    return undefined;
+  }
+  if (!('requestId' in request)) {
+    return undefined;
+  }
+  const value = request.requestId;
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}
+
 export function enterRequestId(requestId: string): void {
   requestIdStorage.enterWith(requestId);
 }

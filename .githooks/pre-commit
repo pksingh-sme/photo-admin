@@ -1,0 +1,36 @@
+#!/usr/bin/env sh
+# Scan staged files for secrets before they enter history. (FR-SEC-001)
+set -eu
+
+root="$(git rev-parse --show-toplevel)"
+config="$root/.gitleaks.toml"
+image="zricethezav/gitleaks:v8.24.3"
+
+if command -v gitleaks >/dev/null 2>&1; then
+  exec gitleaks protect \
+    --staged \
+    --source "$root" \
+    --config "$config" \
+    --redact \
+    --verbose \
+    --exit-code 1
+fi
+
+if command -v docker >/dev/null 2>&1; then
+  exec docker run --rm \
+    -v "$root:/repo" \
+    -w /repo \
+    "$image" \
+    protect \
+    --staged \
+    --source /repo \
+    --config /repo/.gitleaks.toml \
+    --redact \
+    --verbose \
+    --exit-code 1
+fi
+
+echo "gitleaks is required for this hook (FR-SEC-001)." >&2
+echo "Install the binary from https://github.com/gitleaks/gitleaks/releases" >&2
+echo "or install Docker so the hook can run $image." >&2
+exit 1

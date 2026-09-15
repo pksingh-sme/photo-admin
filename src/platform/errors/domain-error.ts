@@ -71,3 +71,13 @@ export class ValidationError extends DomainError {
     });
   }
 }
+
+export class CurrencyMismatchError extends DomainError {
+  constructor(left: string, right: string) {
+    super({
+      code: ErrorCode.CURRENCY_MISMATCH,
+      message: `Cannot combine ${left} with ${right}: Money values must share a currency`,
+      httpStatus: HttpStatus.BAD_REQUEST,
+    });
+  }
+}

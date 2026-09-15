@@ -1,11 +1,13 @@
 import { and, eq, type SQL } from 'drizzle-orm';
 import type { MySqlUpdateSetSource } from 'drizzle-orm/mysql-core';
-import type { Database } from './client.js';
+import type { Database } from './internal/client.js';
 import type { TenantOwnedTable } from './schema/tenant-owned.js';
 import type {
   OemId,
   TenantContext,
 } from '../platform/tenant/tenant-context.js';
+
+export type { Database };
 
 /**
  * The only API for tenant-owned tables. (`FR-TEN-001`, `FR-TEN-002`)
@@ -16,9 +18,8 @@ import type {
  * tenant predicate. Every verb below applies `oem_id = ctx.oemId` itself and
  * ANDs any extra predicate the caller supplies.
  *
- * `db` is an argument, not a singleton and not async-local storage. There is
- * no connection to close over yet, and an implicit db is the same class of
- * bug TenantContext was designed to prevent.
+ * `db` is produced by `src/data/internal/client.ts`. Repositories take it
+ * through `TenantRepository`; they never import the client.
  */
 export function scoped(ctx: TenantContext, db: Database) {
   return {

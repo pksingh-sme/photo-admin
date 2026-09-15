@@ -1,4 +1,4 @@
-import { Controller, Get, Logger } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Logger, Post } from '@nestjs/common';
 import {
   FastifyAdapter,
   type NestFastifyApplication,
@@ -29,6 +29,11 @@ class ErrorProbeController {
       'ER_BAD_FIELD_ERROR: SELECT * FROM secrets WHERE oem_id=?\n    at Query.run (mysql2/promise.js:1:1)',
     );
   }
+
+  @Post('probe/echo')
+  echo(@Body() body: unknown): unknown {
+    return body;
+  }
 }
 
 function readJsonObject(raw: string): Record<string, unknown> {
@@ -53,7 +58,7 @@ describe('DomainExceptionFilter', () => {
     }).compile();
 
     app = moduleRef.createNestApplication<NestFastifyApplication>(
-      new FastifyAdapter(),
+      new FastifyAdapter({ bodyLimit: 64 }),
     );
     await app.init();
     await app.getHttpAdapter().getInstance().ready();
@@ -125,5 +130,63 @@ describe('DomainExceptionFilter', () => {
     } finally {
       errorSpy.mockRestore();
     }
+  });
+
+  it('returns the standard envelope for malformed JSON, not Fastify\'s default', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/probe/echo',
+      headers: { 'content-type': 'application/json' },
+      payload: '{"not": json',
+    });
+    const body = readJsonObject(response.body);
+
+    expect(response.statusCode).toBe(HttpStatus.BAD_REQUEST);
+    expect(Object.keys(body).sort()).toEqual(['code', 'message', 'requestId']);
+    expect(body).toEqual({
+      code: ErrorCode.VALIDATION_ERROR,
+      message: body['message'],
+      requestId: body['requestId'],
+    });
+    expect(typeof body['message']).toBe('string');
+    expect(body['message']).not.toBe('');
+    expect(body['code']).not.toMatch(/^FST_/);
+    expect(body).not.toHaveProperty('statusCode');
+    expect(body).not.toHaveProperty('error');
+    expect(JSON.stringify(body)).not.toMatch(/FST_ERR_/);
+    expect(body['requestId']).toMatch(REQUEST_ID_PATTERN);
+    expect(response.headers[REQUEST_ID_HEADER]).toBe(body['requestId']);
+  });
+
+  it('returns the standard envelope when the payload is too large', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/probe/echo',
+      headers: { 'content-type': 'application/json' },
+      payload: `{"x":"${'a'.repeat(200)}"}`,
+    });
+    const body = readJsonObject(response.body);
+
+    expect(response.statusCode).toBe(HttpStatus.PAYLOAD_TOO_LARGE);
+    expect(Object.keys(body).sort()).toEqual(['code', 'message', 'requestId']);
+    expect(body['code']).toBe(ErrorCode.VALIDATION_ERROR);
+    expect(body).not.toHaveProperty('statusCode');
+    expect(JSON.stringify(body)).not.toMatch(/FST_ERR_/);
+  });
+
+  it('returns the standard envelope for an unsupported media type', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/probe/echo',
+      headers: { 'content-type': 'application/xml' },
+      payload: '<probe/>',
+    });
+    const body = readJsonObject(response.body);
+
+    expect(response.statusCode).toBe(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    expect(Object.keys(body).sort()).toEqual(['code', 'message', 'requestId']);
+    expect(body['code']).toBe(ErrorCode.VALIDATION_ERROR);
+    expect(body).not.toHaveProperty('statusCode');
+    expect(JSON.stringify(body)).not.toMatch(/FST_ERR_/);
   });
 });

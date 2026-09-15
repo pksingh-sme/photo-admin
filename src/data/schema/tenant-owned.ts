@@ -15,6 +15,11 @@ export function isTenantOwnedTableName(name: string): boolean {
   return tenantOwnedTableNames.has(name);
 }
 
+/** Table names passed to {@link tenantOwned}. Used by `test/tenancy/registry.test.ts` (`FR-TEN-010`). */
+export function listTenantOwnedTableNames(): readonly string[] {
+  return [...tenantOwnedTableNames].sort();
+}
+
 declare const tenantOwnedBrand: unique symbol;
 
 /**

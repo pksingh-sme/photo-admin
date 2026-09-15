@@ -219,6 +219,7 @@ Build this in week 2, before there is much to audit — a trail with a hole wher
 - No secret in source, in a client bundle, or in committed configuration. Ever. (`FR-SEC-001`)
 - AWS Secrets Manager, read at startup or via the task role.
 - Anything that might need changing quickly is **server-side configuration**, not a constant — thresholds, feature flags, minimum supported app version.
+- Application security is verified against **OWASP ASVS Level 2** before production release (`FR-SEC-004`). See `docs/SECURITY-STANDARD.md`.
 
 ---
 

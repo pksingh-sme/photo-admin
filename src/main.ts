@@ -5,6 +5,7 @@ import {
   type NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module.js';
+import { loadSecretsAtStartup } from './platform/config/secrets.js';
 import { shutdownTelemetry } from './platform/telemetry/sdk.js';
 import { TelemetryLogger } from './platform/telemetry/telemetry.logger.js';
 
@@ -25,6 +26,7 @@ function listenPort(): number {
 }
 
 async function bootstrap(): Promise<void> {
+  await loadSecretsAtStartup();
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter(),

@@ -7,7 +7,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,7 +18,7 @@ jobs:
       - run: npm run lint
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,8 +28,20 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  typecheck:
+    name: tsc (including specs)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,7 +53,7 @@ jobs:
 
   tenant-request:
     name: FR-API-003
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -53,7 +65,7 @@ jobs:
 
   tenancy:
     name: test/tenancy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -62,6 +74,73 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      # Required. Expected to fail until the first tenant-owned entity
-      # registers with assertTenantIsolation (FR-TEN-010, Sprint 0.6).
+      # Required. Fails if a tenantOwned() table has no assertTenantIsolation
+      # suite (FR-TEN-010). Green with zero entities; adding a table without a
+      # suite turns the job red.
       - run: npm run test:tenancy
+
+  gitleaks:
+    name: gitleaks (FR-SEC-001)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: "8.24.3"
+        run: |
+          arch="linux_arm64"
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_${arch}.tar.gz" -o /tmp/gitleaks.tgz
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+          sudo install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+      - name: Scan pull request diff
+        if: github.event_name == 'pull_request'
+        run: |
+          gitleaks detect \
+            --source . \
+            --config .gitleaks.toml \
+            --verbose \
+            --redact \
+            --exit-code 1 \
+            --log-opts "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+      - name: Scan full git history
+        if: github.event_name != 'pull_request'
+        run: |
+          gitleaks detect \
+            --source . \
+            --config .gitleaks.toml \
+            --verbose \
+            --redact \
+            --exit-code 1
+
+  image:
+    name: docker linux/arm64
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Graviton image
+        run: docker build --platform linux/arm64 -t photoprint-api:${{ github.sha }} .
+
+  infra:
+    name: cdk synth
+    runs-on: ubuntu-24.04-arm
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: infra/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npx tsc --noEmit -p tsconfig.json
+      - name: Synth (EEA)
+        env:
+          CDK_DEFAULT_ACCOUNT: "111111111111"
+          CDK_DEFAULT_REGION: eu-central-1
+        run: npx cdk synth --quiet --region eu-central-1 --context imageTag=${{ github.sha }}

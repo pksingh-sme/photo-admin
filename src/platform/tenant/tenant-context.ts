@@ -3,8 +3,9 @@
  * a request field. (`FR-API-003`, `BR-ARCH-003`)
  *
  * Brands are unique symbols that are not exported, so the only legal
- * constructors are the functions in this file. A value assertion (`as`) can
- * still forge one; that is a review defect, not an API.
+ * constructors are the functions in this file. `as TenantContext` is rejected
+ * by ESLint (`no-restricted-syntax`). Structural assignment is a type error
+ * (`@ts-expect-error` in `src/data/scoped.spec.ts`).
  */
 
 declare const oemIdBrand: unique symbol;

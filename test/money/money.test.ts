@@ -1,6 +1,7 @@
 import { Decimal } from 'decimal.js';
 import { describe, expect, it } from 'vitest';
 import { Money, CurrencyMismatchError } from '../../src/money/money.js';
+import { DomainError } from '../../src/platform/errors/domain-error.js';
 import { RoundingPolicy } from '../../src/money/rounding.js';
 
 function threeShares(shares: readonly Money[]): [Money, Money, Money] {
@@ -45,7 +46,7 @@ describe('Money', () => {
       const discount = Money.of('10.00', 'EUR');
       const shares = Money.allocate(
         discount,
-        lines.map((line) => line.net.amount),
+        lines.map((line) => new Decimal(Money.toJSON(line.net).amount)),
       );
       const [standard, reduced, zero] = threeShares(shares);
 
@@ -72,16 +73,35 @@ describe('Money', () => {
       expect(Money.equals(rounded, Money.of('1.01', 'EUR'))).toBe(true);
     });
 
-    it('adding EUR to GBP fails', () => {
+    it('adding EUR to GBP fails with a domain CURRENCY_MISMATCH', () => {
       const eur: Money = Money.of('1.00', 'EUR');
       const gbp: Money = Money.of('1.00', 'GBP');
       expect(() => Money.add(eur, gbp)).toThrow(CurrencyMismatchError);
       expect(() => Money.subtract(eur, gbp)).toThrow(CurrencyMismatchError);
+      try {
+        Money.add(eur, gbp);
+        expect.unreachable('mixed-currency add must throw');
+      } catch (error) {
+        expect(error).toBeInstanceOf(DomainError);
+        expect(error).toBeInstanceOf(CurrencyMismatchError);
+        if (error instanceof CurrencyMismatchError) {
+          expect(error.code).toBe('CURRENCY_MISMATCH');
+        }
+      }
+    });
+  });
+
+  describe('display', () => {
+    it('toString and format expose the amount without a public Decimal', () => {
+      const price = Money.of('12.3', 'EUR');
+      expect(Money.toString(price)).toBe('12.3 EUR');
+      expect(Money.format(price)).toBe('12.30 EUR');
+      expect(Money.toJSON(price)).toEqual({ amount: '12.3', currency: 'EUR' });
     });
   });
 
   describe('types', () => {
-    it('rejects a number amount, fromNumber, mixed-currency add, and Money as a quantity', () => {
+    it('rejects a number amount, fromNumber, mixed-currency add, Money as a quantity, and amount.plus', () => {
       const _typeCheck = () => {
         // @ts-expect-error amount must be a string — there is no fromNumber
         Money.of(1.005, 'EUR');
@@ -91,6 +111,10 @@ describe('Money', () => {
         Money.add(Money.of('1.00', 'EUR'), Money.of('1.00', 'GBP'));
         // @ts-expect-error multiply takes a quantity, never Money
         Money.multiply(Money.of('10.00', 'EUR'), Money.of('2', 'EUR'));
+        const euros = Money.of('1.00', 'EUR');
+        const pounds = Money.of('1.00', 'GBP');
+        // @ts-expect-error amount is not on Money; arithmetic goes through Money methods
+        euros.amount.plus(pounds.amount);
       };
       void _typeCheck;
       expect(_typeCheck).toBeTypeOf('function');

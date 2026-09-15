@@ -38,6 +38,8 @@ export default defineConfig({
             'test/authz/**/*.test.ts',
             'test/contract/**/*.spec.ts',
             'test/contract/**/*.test.ts',
+            'test/docker/**/*.spec.ts',
+            'test/docker/**/*.test.ts',
           ],
         },
       },

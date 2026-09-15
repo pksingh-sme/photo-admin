@@ -3,9 +3,13 @@ dist/
 coverage/
 *.tsbuildinfo
 *.log
+# Secrets never enter git. `.env.example` is names only. (FR-SEC-001)
 .env
 .env.*
 !.env.example
 .DS_Store
 .idea/
 .vscode/
+infra/node_modules/
+infra/cdk.out/
+infra/cdk.context.json

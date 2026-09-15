@@ -1,0 +1,14 @@
+{
+    "app": "npx tsx bin/app.ts",
+  "watch": {
+    "include": ["**"],
+    "exclude": ["README.md", "cdk*.json", "**/*.d.ts", "**/*.js", "node_modules", "test"]
+  },
+  "context": {
+    "@aws-cdk/aws-ecs:removeDefaultDesiredCount": true,
+    "availability-zones:account=111111111111:region=eu-central-1": [
+      "eu-central-1a",
+      "eu-central-1b"
+    ]
+  }
+}

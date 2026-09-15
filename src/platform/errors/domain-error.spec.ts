@@ -1,6 +1,7 @@
 import { HttpStatus } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 import {
+  CurrencyMismatchError,
   DomainError,
   ForbiddenError,
   NotFoundError,
@@ -33,5 +34,9 @@ describe('domain errors', () => {
     expect(new ValidationError('email is required').httpStatus).toBe(
       HttpStatus.BAD_REQUEST,
     );
+    const mismatch = new CurrencyMismatchError('EUR', 'GBP');
+    expect(mismatch).toBeInstanceOf(DomainError);
+    expect(mismatch.code).toBe(ErrorCode.CURRENCY_MISMATCH);
+    expect(mismatch.httpStatus).toBe(HttpStatus.BAD_REQUEST);
   });
 });

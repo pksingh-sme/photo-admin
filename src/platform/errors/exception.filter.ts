@@ -11,6 +11,7 @@ import {
   REQUEST_ID_HEADER,
   createRequestId,
   getRequestId,
+  readRequestId,
 } from './request-id.js';
 
 @Catch()
@@ -44,15 +45,4 @@ export class DomainExceptionFilter implements ExceptionFilter {
     httpAdapter.setHeader(response, REQUEST_ID_HEADER, requestId);
     httpAdapter.reply(response, body, mapped.status);
   }
-}
-
-function readRequestId(request: unknown): string | undefined {
-  if (typeof request !== 'object' || request === null) {
-    return undefined;
-  }
-  if (!('requestId' in request)) {
-    return undefined;
-  }
-  const value = request.requestId;
-  return typeof value === 'string' && value !== '' ? value : undefined;
 }

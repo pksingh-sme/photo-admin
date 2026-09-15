@@ -28,8 +28,10 @@ export type TenantIsolationFactory<
 /**
  * Parameterised tenancy suite. (`FR-TEN-010`)
  *
- * Every tenant-owned entity registers here. Out-of-scope access must be
- * **not-found** (404), never **forbidden** (403). (`FR-TEN-003`)
+ * `entityName` must be the table name passed to `tenantOwned()`.
+ * `test/tenancy/registry.test.ts` fails the build if a tenant-owned table
+ * has no matching call. Out-of-scope access must be **not-found** (404),
+ * never **forbidden** (403). (`FR-TEN-003`)
  */
 export function assertTenantIsolation<T extends IsolationRecord>(
   entityName: string,

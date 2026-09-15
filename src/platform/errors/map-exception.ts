@@ -41,6 +41,20 @@ export function mapException(exception: unknown): MappedException {
     };
   }
 
+  if (isHttpStatusError(exception)) {
+    const status = exception.statusCode;
+    const serverError = status >= HttpStatus.INTERNAL_SERVER_ERROR;
+    const raw = exception.message;
+    const unsafe = serverError || isUnsafeErrorMessage(raw);
+    return {
+      status,
+      code: codeForStatus(status),
+      message: unsafe ? GENERIC_INTERNAL_MESSAGE : raw,
+      logUnhandled: serverError || unsafe,
+      stack: exception.stack,
+    };
+  }
+
   const stack = exception instanceof Error ? exception.stack : undefined;
   return {
     status: HttpStatus.INTERNAL_SERVER_ERROR,
@@ -49,6 +63,19 @@ export function mapException(exception: unknown): MappedException {
     logUnhandled: true,
     stack,
   };
+}
+
+function isHttpStatusError(
+  exception: unknown,
+): exception is Error & { statusCode: number } {
+  if (!(exception instanceof Error) || !('statusCode' in exception)) {
+    return false;
+  }
+  const status = exception.statusCode;
+  if (typeof status !== 'number' || !Number.isInteger(status)) {
+    return false;
+  }
+  return status >= 400 && status <= 599;
 }
 
 function nestHttpMessage(exception: HttpException): string {

@@ -28,6 +28,7 @@
   },
   "include": [
     "src/**/*.ts",
+    "src/**/*.spec.ts",
     "test/**/*.ts",
     "scripts/**/*.ts",
     "vitest.setup.ts",

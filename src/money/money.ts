@@ -1,4 +1,5 @@
 import { Decimal } from 'decimal.js';
+import { CurrencyMismatchError } from '../platform/errors/domain-error.js';
 import { assertIso4217Code, type Currency } from './currency.js';
 import {
   MONEY_DECIMAL_PLACES,
@@ -8,41 +9,40 @@ import {
 } from './rounding.js';
 
 export type { Currency } from './currency.js';
+export { CurrencyMismatchError } from '../platform/errors/domain-error.js';
 export { MONEY_DECIMAL_PLACES, RoundingPolicy } from './rounding.js';
 
 /**
- * Branded monetary value. Amount is a Decimal; currency is an ISO 4217 code.
- * Construct only through `Money.of` — there is no `fromNumber`.
+ * Branded monetary value. The Decimal amount is module-private — arithmetic
+ * goes through `Money` methods only, which check currency. Construct only
+ * through `Money.of`; there is no `fromNumber`.
  *
  * The type parameter is the currency literal when it is known (`Money<'EUR'>`).
  * Adding `Money<'EUR'>` to `Money<'GBP'>` is a compile error. Heterogeneous
  * `Money` values still throw `CurrencyMismatchError` at runtime.
  */
 const moneyBrand: unique symbol = Symbol('Money');
+const amounts = new WeakMap<object, Decimal>();
 
 export type Money<C extends string = Currency> = {
   readonly [moneyBrand]: 'Money';
-  readonly amount: Decimal;
   readonly currency: C;
 };
 
-export class CurrencyMismatchError extends Error {
-  readonly code = 'CURRENCY_MISMATCH';
-
-  constructor(left: string, right: string) {
-    super(
-      `Cannot combine ${left} with ${right}: Money values must share a currency`,
-    );
-    this.name = 'CurrencyMismatchError';
+function amountOf(money: Money): Decimal {
+  const amount = amounts.get(money);
+  if (amount === undefined) {
+    throw new Error('Money: value is missing its internal amount');
   }
+  return amount;
 }
 
 function raw<C extends string>(amount: Decimal, currency: C): Money<C> {
   const money: Money<C> = {
     [moneyBrand]: 'Money',
-    amount,
     currency,
   };
+  amounts.set(money, amount);
   return Object.freeze(money);
 }
 
@@ -85,7 +85,7 @@ function add<const C extends string, D extends C>(
   right: Money<D>,
 ): Money<C> {
   assertSameCurrency(left, right);
-  return raw(left.amount.plus(right.amount), left.currency);
+  return raw(amountOf(left).plus(amountOf(right)), left.currency);
 }
 
 function subtract<const C extends string, D extends C>(
@@ -93,7 +93,7 @@ function subtract<const C extends string, D extends C>(
   right: Money<D>,
 ): Money<C> {
   assertSameCurrency(left, right);
-  return raw(left.amount.minus(right.amount), left.currency);
+  return raw(amountOf(left).minus(amountOf(right)), left.currency);
 }
 
 function quantityToDecimal(quantity: Decimal | number): Decimal {
@@ -115,7 +115,10 @@ function multiply<C extends string>(
   money: Money<C>,
   quantity: Decimal | number,
 ): Money<C> {
-  return raw(money.amount.times(quantityToDecimal(quantity)), money.currency);
+  return raw(
+    amountOf(money).times(quantityToDecimal(quantity)),
+    money.currency,
+  );
 }
 
 function round<C extends string>(
@@ -123,7 +126,7 @@ function round<C extends string>(
   policy: RoundingPolicyName,
 ): Money<C> {
   return raw(
-    money.amount.toDecimalPlaces(
+    amountOf(money).toDecimalPlaces(
       MONEY_DECIMAL_PLACES,
       decimalRoundingMode(policy),
     ),
@@ -169,7 +172,7 @@ function allocate<C extends string>(
 
   const rounded = weights.map((weight) =>
     round(
-      raw(total.amount.times(weight).div(weightSum), total.currency),
+      raw(amountOf(total).times(weight).div(weightSum), total.currency),
       RoundingPolicy.HALF_UP,
     ),
   );
@@ -185,12 +188,40 @@ function allocate<C extends string>(
 }
 
 function equals(left: Money, right: Money): boolean {
-  return left.currency === right.currency && left.amount.equals(right.amount);
+  return (
+    left.currency === right.currency && amountOf(left).equals(amountOf(right))
+  );
+}
+
+function decimalToString(value: Decimal): string {
+  return value.toJSON();
+}
+
+function formatDecimal(value: Decimal, places: number): string {
+  const rounded = value.toDecimalPlaces(places, Decimal.ROUND_HALF_UP);
+  const sign = rounded.isNegative() ? '-' : '';
+  const abs = rounded.abs();
+  const rawDigits = decimalToString(abs);
+  const dot = rawDigits.indexOf('.');
+  const whole = dot === -1 ? rawDigits : rawDigits.slice(0, dot);
+  const fraction = dot === -1 ? '' : rawDigits.slice(dot + 1);
+  if (places === 0) {
+    return `${sign}${whole}`;
+  }
+  return `${sign}${whole}.${fraction.padEnd(places, '0').slice(0, places)}`;
+}
+
+function toString(money: Money): string {
+  return `${decimalToString(amountOf(money))} ${money.currency}`;
+}
+
+function format(money: Money): string {
+  return `${formatDecimal(amountOf(money), MONEY_DECIMAL_PLACES)} ${money.currency}`;
 }
 
 function toJSON(money: Money): { amount: string; currency: string } {
   return {
-    amount: money.amount.toFixed(),
+    amount: decimalToString(amountOf(money)),
     currency: money.currency,
   };
 }
@@ -203,6 +234,8 @@ export const Money: {
   readonly allocate: typeof allocate;
   readonly round: typeof round;
   readonly equals: typeof equals;
+  readonly toString: typeof toString;
+  readonly format: typeof format;
   readonly toJSON: typeof toJSON;
 } = {
   of,
@@ -212,5 +245,7 @@ export const Money: {
   allocate,
   round,
   equals,
+  toString,
+  format,
   toJSON,
 };

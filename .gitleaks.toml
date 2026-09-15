@@ -1,0 +1,44 @@
+# PhotoPrint secret scan (FR-SEC-001)
+#
+# Default gitleaks rules plus explicit coverage for AWS keys, private keys,
+# generic high-entropy assignments, and credentialed connection strings.
+
+title = "photoprint FR-SEC-001"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "photoprint-aws-access-key"
+description = "AWS access key ID"
+regex = '''(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|ANPA|ANVA|ASIA)[A-Z0-9]{16}'''
+keywords = ["akia", "asia", "agpa", "aida"]
+tags = ["aws", "key"]
+
+[[rules]]
+id = "photoprint-private-key"
+description = "Private key PEM"
+regex = '''-----BEGIN[ A-Z]*PRIVATE KEY-----'''
+keywords = ["private key", "begin rsa", "begin openssh", "begin ec"]
+tags = ["key", "private"]
+
+[[rules]]
+id = "photoprint-generic-high-entropy"
+description = "Generic high-entropy secret assignment"
+regex = '''(?i)(?:secret|passwd|password|token|api[_-]?key|access[_-]?key)\s*[=:]\s*['"]?[A-Za-z0-9/+_\-=]{24,}['"]?'''
+entropy = 3.5
+keywords = ["secret", "password", "token", "api_key", "apikey", "access_key"]
+tags = ["entropy", "secret"]
+
+[[rules]]
+id = "photoprint-connection-string"
+description = "Connection string containing credentials"
+regex = '''(?i)(?:mysql|mariadb|postgres(?:ql)?|mongodb(?:\+srv)?|redis|rediss|amqp|amqps)://[^\s:/@]+:[^\s@/]+@'''
+keywords = ["mysql://", "postgres://", "mongodb://", "redis://", "amqp://"]
+tags = ["connection", "credential"]
+
+[[allowlists]]
+description = "Lockfiles are not credentials"
+paths = [
+  '''(^|/)package-lock\.json$''',
+]

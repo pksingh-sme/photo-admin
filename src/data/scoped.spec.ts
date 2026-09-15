@@ -1,6 +1,6 @@
 import { mysqlTable, varchar } from 'drizzle-orm/mysql-core';
 import { describe, expect, it } from 'vitest';
-import type { Database } from './client.js';
+import type { Database } from './scoped.js';
 import { scoped } from './scoped.js';
 import type { TenantOwnedTable } from './schema/tenant-owned.js';
 import { tenantOwned } from './schema/tenant-owned.js';
@@ -40,6 +40,13 @@ describe('scoped table constraint', () => {
   it('does not accept a raw object as TenantContext', () => {
     // @ts-expect-error TenantContext is branded and not structurally constructible
     const forged: TenantContext = { oemId: 'oem-a' };
+    void forged;
+  });
+
+  it('rejects a value assertion as TenantContext', () => {
+    const plain: { oemId: string } = { oemId: 'oem-a' };
+    // @ts-expect-error as TenantContext cannot invent the unique-symbol brand
+    const forged: TenantContext = plain as unknown;
     void forged;
   });
 
