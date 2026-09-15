@@ -4,6 +4,7 @@ import {
   type NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module.js';
+import { RequestIdLogger } from './platform/errors/request-id.logger.js';
 
 const DEFAULT_PORT = 3000;
 
@@ -25,6 +26,7 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter(),
+    { logger: new RequestIdLogger() },
   );
 
   await app.listen(listenPort(), '0.0.0.0');

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/platform-fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from './app.module.js';
+import { REQUEST_ID_PATTERN } from './platform/errors/request-id.js';
 
 describe('GET /health', () => {
   let app: NestFastifyApplication;
@@ -33,5 +34,6 @@ describe('GET /health', () => {
 
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body)).toEqual({ status: 'ok' });
+    expect(response.headers['x-request-id']).toMatch(REQUEST_ID_PATTERN);
   });
 });
