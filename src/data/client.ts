@@ -1,5 +1,6 @@
 import { drizzle, type MySql2Database } from 'drizzle-orm/mysql2';
 import { createPool as createMysql2Pool, type Pool } from 'mysql2/promise';
+import { TenantScopeQueryHook } from './tenant-scope-hook.js';
 
 /**
  * DECIMAL, BIGINT and related values must arrive as strings. These flags are
@@ -34,5 +35,12 @@ export function createPool(config: MysqlPoolConfig): Pool {
 export type Database = MySql2Database;
 
 export function createDb(pool: Pool): Database {
-  return drizzle({ client: pool });
+  if (process.env['NODE_ENV'] === 'production') {
+    return drizzle({ client: pool });
+  }
+
+  return drizzle({
+    client: pool,
+    logger: new TenantScopeQueryHook(),
+  });
 }
