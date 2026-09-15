@@ -32,6 +32,7 @@ export default defineConfig({
           include: [
             'src/**/*.spec.ts',
             'src/**/*.test.ts',
+            'scripts/**/*.spec.ts',
             'test/money/**/*.spec.ts',
             'test/money/**/*.test.ts',
             'test/authz/**/*.spec.ts',

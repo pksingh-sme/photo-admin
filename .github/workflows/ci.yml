@@ -122,6 +122,27 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Graviton image
         run: docker build --platform linux/arm64 -t photoprint-api:${{ github.sha }} .
+      - name: Runtime has no scripts/
+        run: |
+          docker run --rm --user root --entrypoint /bin/sh photoprint-api:${{ github.sha }} \
+            -c 'test ! -e /app/scripts && test -f /app/dist/main.js'
+      - name: Container answers GET /health
+        run: |
+          docker run -d --name photoprint-api-smoke \
+            -e NODE_ENV=development \
+            -e MYSQL_PASSWORD=ci-smoke \
+            -e OTEL_SDK_DISABLED=true \
+            -p 3000:3000 \
+            photoprint-api:${{ github.sha }}
+          trap 'docker logs photoprint-api-smoke; docker rm -f photoprint-api-smoke' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/health | grep -q '"status":"ok"'; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "health check did not become ready"
+          exit 1
 
   infra:
     name: cdk synth

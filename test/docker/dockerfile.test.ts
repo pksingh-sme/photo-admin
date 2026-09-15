@@ -30,4 +30,24 @@ describe('Dockerfile (Sprint 0 item 0.1)', () => {
       .filter((line) => line.startsWith('USER '));
     expect(users.at(-1)).not.toBe('USER root');
   });
+
+  it('does not run prepare (git hooks) during npm ci', () => {
+    expect(dockerfile).toMatch(/npm ci --ignore-scripts/);
+    expect(dockerfile).toMatch(/npm prune --omit=dev --ignore-scripts/);
+    expect(dockerfile).not.toMatch(/^\s*COPY scripts\b/m);
+  });
+
+  it('runtime stage copies only package.json, node_modules and dist', () => {
+    const runtime = dockerfile.split(/^FROM /m).at(-1) ?? '';
+    const copies = runtime
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith('COPY '));
+    expect(copies).toEqual([
+      'COPY --from=build --chown=node:node /app/package.json ./',
+      'COPY --from=build --chown=node:node /app/node_modules ./node_modules',
+      'COPY --from=build --chown=node:node /app/dist ./dist',
+    ]);
+    expect(runtime).not.toMatch(/\bscripts\b/);
+  });
 });

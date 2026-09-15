@@ -65,8 +65,8 @@ The audit's conclusion is correct: the files exist; several guards do not fire.
 > - Verify `tsconfig.json` (not the build variant) includes `src/**/*.spec.ts`, `test/**` and `scripts/**`
 >
 > Then prove it two ways:
-> 1. Temporarily delete a `@ts-expect-error` in `scoped.spec.ts` where the error is still raised → `typecheck` must **fail** with "unused @ts-expect-error"
-> 2. Temporarily widen the `TenantContext` brand so a plain object satisfies it → `typecheck` must **fail** on the proof that forging a context is rejected
+> 1. Temporarily delete a `@ts-expect-error` in `scoped.spec.ts` where the error is still raised → `typecheck` must **fail** with the underlying error (`TS2322` or similar)
+> 2. Temporarily widen the `TenantContext` brand so a plain object satisfies it → `typecheck` must **fail** with `TS2578`, unused `@ts-expect-error` directive — this is the signal that a proof has stopped proving anything
 >
 > Show me both failures, then revert both.
 

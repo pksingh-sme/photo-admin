@@ -17,7 +17,7 @@ Nothing in this sprint produces a visible feature. All of it is unrecoverable if
 | 0.3 | `src/data/` boundary + lint rule rejecting database imports elsewhere | `FR-TEN-002` | An import outside `src/data/` fails the build |
 | 0.4 | `scoped()` builder requiring `TenantContext` | `FR-TEN-001`–`004` | No path reachable from feature code compiles unscoped; the raw client is confined to one file; `TenantContext` is unforgeable; the runtime hook covers the residue inside `src/data/` |
 | 0.5 | Non-production runtime assertion on missing scope predicate | `FR-TEN-002` | A crafted unscoped statement throws in dev |
-| 0.6 | `test/tenancy/` suite — read, write, update, delete, list | `FR-TEN-010` | Suite exists and fails (no code yet) |
+| 0.6 | `test/tenancy/` suite + registry assertion | `FR-TEN-010` | Registry enumerates every `tenantOwned()` table and asserts each has an isolation suite; passes at zero entities; fails by name when one is missing |
 | 0.7 | Build check rejecting tenant identifiers in request signatures | `FR-API-003` | Adding `@Query('oemId')` fails the build |
 | 0.8 | `Money` type, decimal.js, driver returns `DECIMAL` as string | Parts 5–6 | A `number` cannot become `Money`; round-trip test passes |
 | 0.9 | OpenTelemetry with OEM as a **span attribute and baggage** (never a resource attribute — a Resource is process-wide and one process serves every OEM) | `FR-TEN-009` | A trace carries OEM context end to end |
@@ -25,10 +25,6 @@ Nothing in this sprint produces a visible feature. All of it is unrecoverable if
 | 0.11 | Name the application security standard to test against | `FR-SEC-004` | Written down and agreed |
 
 **Do not start 1.x until 0.3 through 0.8 are done.** They are constraints on how everything after is written.
-
-Item 0.1: Graviton `linux/arm64` image, EEA CDK stages (`eu-central-1`), and ARM CI. Merge to `main` deploys **dev**; staging and production are gated GitHub Environments.
-
-Item 0.11 is named in `docs/SECURITY-STANDARD.md`: **OWASP ASVS Level 2**, verified before production release. Sponsor agreement, chapter owners, third-party booking and `.cursor/rules` control IDs are still outstanding.
 
 ---
 

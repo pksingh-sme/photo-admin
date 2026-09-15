@@ -1,7 +1,15 @@
 import eslint from '@eslint/js';
 import prettier from 'eslint-config-prettier';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import vitest from '@vitest/eslint-plugin';
+import { zodInferRequestParamsRule } from './scripts/eslint-rules/zod-infer-request-params.mjs';
+
+const photoprintPlugin = {
+  rules: {
+    'zod-infer-request-params': zodInferRequestParamsRule,
+  },
+};
 
 const CREATE_POOL_MESSAGE =
   'createPool may be called only in src/data/internal/client.ts. A second pool bypasses DECIMAL flags and the tenant-scope hook.';
@@ -71,6 +79,21 @@ const syntaxCreatePool = [
   },
 ];
 
+const RAW_REQUEST_MESSAGE =
+  'Raw request access defeats FR-API-003 enforcement. Use typed parameters.';
+
+const syntaxRawRequest = [
+  {
+    selector:
+      "Decorator[expression.callee.name=/^(Req|Res|Request|Response|Next)$/]",
+    message: RAW_REQUEST_MESSAGE,
+  },
+  {
+    selector: "Decorator[expression.name=/^(Req|Res|Request|Response|Next)$/]",
+    message: RAW_REQUEST_MESSAGE,
+  },
+];
+
 const internalImportPatterns = [
   '**/data/internal',
   '**/data/internal/**',
@@ -87,6 +110,7 @@ export default tseslint.config(
       'coverage/**',
       'infra/cdk.out/**',
       'infra/node_modules/**',
+      'scripts/__fixtures__/**',
       '**/.gitkeep',
       'package-lock.json',
     ],
@@ -94,6 +118,28 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   prettier,
+  {
+    files: ['src/**', 'scripts/**', 'test/**', 'infra/**'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        // @types/node namespace; no-undef does not see TypeScript namespaces.
+        NodeJS: 'readonly',
+      },
+    },
+    rules: {
+      // typescript-eslint turns no-undef off for *.ts (tsc already reports
+      // undeclared names). Re-enable it here so a browser global in server
+      // code fails lint, not only tsc — globals.node does not include window.
+      'no-undef': 'error',
+    },
+  },
+  {
+    files: ['apps/admin-ui/**'],
+    languageOptions: {
+      globals: globals.browser,
+    },
+  },
   {
     files: ['**/*.ts'],
     rules: {
@@ -210,6 +256,21 @@ export default tseslint.config(
     },
   },
   {
+    files: ['src/modules/**/*.ts', 'src/**/*.controller.ts'],
+    plugins: {
+      photoprint: photoprintPlugin,
+    },
+    rules: {
+      'photoprint/zod-infer-request-params': 'error',
+      'no-restricted-syntax': [
+        'error',
+        ...syntaxBoundary,
+        ...syntaxCreatePool,
+        ...syntaxRawRequest,
+      ],
+    },
+  },
+  {
     files: [
       'src/money/**/*.ts',
       'src/modules/pricing/**/*.ts',
@@ -224,6 +285,7 @@ export default tseslint.config(
         ...syntaxBoundary,
         ...syntaxCreatePool,
         ...syntaxMoneyNumber,
+        ...syntaxRawRequest,
       ],
     },
   },

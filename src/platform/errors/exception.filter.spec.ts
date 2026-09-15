@@ -5,11 +5,15 @@ import {
 } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
+import { zodPipe } from '../http/zod-pipe.js';
 import { ForbiddenError, NotFoundError } from './domain-error.js';
 import { ErrorCode } from './error-codes.js';
 import { ErrorsModule } from './errors.module.js';
 import { REQUEST_ID_HEADER, REQUEST_ID_PATTERN } from './request-id.js';
 import { GENERIC_INTERNAL_MESSAGE } from './unsafe-message.js';
+
+const echoBodySchema = z.looseObject({});
 
 @Controller()
 class ErrorProbeController {
@@ -31,7 +35,9 @@ class ErrorProbeController {
   }
 
   @Post('probe/echo')
-  echo(@Body() body: unknown): unknown {
+  echo(
+    @Body(zodPipe(echoBodySchema)) body: z.infer<typeof echoBodySchema>,
+  ): z.infer<typeof echoBodySchema> {
     return body;
   }
 }

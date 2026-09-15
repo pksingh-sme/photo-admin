@@ -2,6 +2,10 @@ import { chmodSync, copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
+if (process.env['CI'] === 'true' || process.env['CI'] === '1') {
+  process.exit(0);
+}
+
 const gitDir = path.join(root, '.git');
 if (!existsSync(gitDir)) {
   process.exit(0);

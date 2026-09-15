@@ -1,6 +1,7 @@
 .git
 .github
 .githooks
+scripts
 .cursor
 coverage
 dist

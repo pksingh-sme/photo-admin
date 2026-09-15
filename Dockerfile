@@ -5,7 +5,9 @@ FROM --platform=linux/arm64 node@sha256:8d1405ad7696efa6941cb7745c2aa51d02549b90
 WORKDIR /app
 COPY package.json package-lock.json nest-cli.json tsconfig.json tsconfig.build.json ./
 COPY src ./src
-RUN npm ci && npm run build && npm prune --omit=dev
+# Git hooks belong on a developer machine, not in the image. prepare would
+# look for scripts/install-git-hooks.mjs, which is not copied here.
+RUN npm ci --ignore-scripts && npm run build && npm prune --omit=dev --ignore-scripts
 
 FROM --platform=linux/arm64 node@sha256:8d1405ad7696efa6941cb7745c2aa51d02549b900e4a40fdf212a1b5115dd1b9 AS runtime
 WORKDIR /app
