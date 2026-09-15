@@ -17,8 +17,13 @@ if command -v gitleaks >/dev/null 2>&1; then
 fi
 
 if command -v docker >/dev/null 2>&1; then
-  exec docker run --rm \
-    -v "$root:/repo" \
+  host="$root"
+  if command -v cygpath >/dev/null 2>&1; then
+    host="$(cygpath -m "$root")"
+  fi
+  # Git Bash otherwise rewrites /repo to C:/Program Files/Git/repo.
+  MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' exec docker run --rm \
+    -v "${host}:/repo" \
     -w /repo \
     "$image" \
     protect \
